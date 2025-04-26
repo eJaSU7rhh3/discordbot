@@ -61,7 +61,7 @@ if (os.path.exists("botspammer.json")):
 
 def startBot():
     if (platform.system() == "Linux"):
-        threading.Thread( target=subprocess.run, args=( ["venv/bot/bin/python3", "bin/bot.py", botToken], )).start()
+        threading.Thread( target=subprocess.run, args=( ["venv/bot/bin/python", "bin/bot.py", botToken], )).start()
     elif (platform.system() == "Windows"):
         subprocess.run(["venv\\bot\\Scripts\\python3", "bin\\bot.py", botToken])
 
@@ -77,7 +77,7 @@ def startSpam(parent):
     if (platform.system() == "Linux"):
         threading.Thread( target=subprocess.run, args=( ["venv/user/bin/python3", "bin/user.py", preset_messages[current_preset]["spam_message"], preset_messages[current_preset]["fallback_message"], token, application_name, command_name, guildId[0], rmstr, str(maximum_spam_count)], )).start()
     elif (platform.system() == "Windows"):
-        threading.Thread( target=subprocess.run, args=( ["venv\\user\\Scripts\\python3", "bin\\user.py", preset_messages[current_preset]["spam_message"], preset_messages[current_preset]["fallback_message"], token, application_name, command_name, guildId[0], rmstr, str(maximum_spam_count)], )).start()
+        threading.Thread( target=subprocess.run, args=( ["venv\\user\\Scripts\\python", "bin\\user.py", preset_messages[current_preset]["spam_message"], preset_messages[current_preset]["fallback_message"], token, application_name, command_name, guildId[0], rmstr, str(maximum_spam_count)], )).start()
     
 
 class presetAddWindow(QDialog):
