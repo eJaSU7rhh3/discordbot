@@ -195,6 +195,10 @@ def updateMSC(val):
     maximum_spam_count = val
     updatejson()
 
+def updatePreset(new):
+    global current_preset
+    current_preset = new
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -241,6 +245,8 @@ class MainWindow(QMainWindow):
         presetList = QComboBox()
         presetList.addItems(presetItemArray)
         presetList.setCurrentText(default_preset)
+        presetList.currentIndexChanged.connect(lambda: updatePreset(presetList.currentText()))
+        current_preset = default_preset
 
         currentDefaultLb = QLabel()
         currentDefaultLb.setText("Current Default: "+default_preset)
