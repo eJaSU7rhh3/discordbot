@@ -202,6 +202,12 @@ def updatePreset(new):
 def updateAppName(new):
     global application_name
     application_name = new
+    updatejson()
+
+def updateCmdName(new):
+    global command_name
+    command_name = new
+    updatejson()
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -306,7 +312,7 @@ class MainWindow(QMainWindow):
         
         cmdNameBox = QLineEdit()
         cmdNameBox.setText(command_name)
-        cmdNameBox.editingFinished.connect(lambda: updateAppName(cmdNameBox.text()))
+        cmdNameBox.editingFinished.connect(lambda: updateCmdName(cmdNameBox.text()))
         
         startSpamBtn = QPushButton()
         startSpamBtn.setText("Start Spam")
@@ -327,7 +333,11 @@ class MainWindow(QMainWindow):
         usrGrpBoxLayout.addWidget(randomizeMsgChk, 9, 0)
         usrGrpBoxLayout.addWidget(label4, 10, 0)
         usrGrpBoxLayout.addWidget(maxSpamCountBox, 11, 0)
-        usrGrpBoxLayout.addWidget(startSpamBtn, 12, 0)
+        usrGrpBoxLayout.addWidget(label6, 12, 0)
+        usrGrpBoxLayout.addWidget(appNameBox, 13, 0)
+        usrGrpBoxLayout.addWidget(label7, 14, 0)
+        usrGrpBoxLayout.addWidget(cmdNameBox, 15, 0)
+        usrGrpBoxLayout.addWidget(startSpamBtn, 16, 0)
 
         layout.addWidget(botGrpBox)
         layout.addWidget(usrGrpBox)
