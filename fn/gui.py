@@ -61,9 +61,9 @@ if (os.path.exists("botspammer.json")):
 
 def startBot():
     if (platform.system() == "Linux"):
-        threading.Thread( target=subprocess.run, args=( ["venv/bot/bin/python", "bin/bot.py", botToken], )).start()
+        threading.Thread( target=subprocess.run, args=( ["venv/bot/bin/python3", "bin/bot.py", botToken], )).start()
     elif (platform.system() == "Windows"):
-        subprocess.run(["venv\\bot\\Scripts\\python3", "bin\\bot.py", botToken])
+        subprocess.run(["venv\\bot\\Scripts\\python", "bin\\bot.py", botToken])
 
 def startSpam(parent):
     guildId = QInputDialog.getText(parent, "Start Spam", "Enter server (or channel) ID")
