@@ -246,7 +246,8 @@ class MainWindow(QMainWindow):
         presetList.addItems(presetItemArray)
         presetList.setCurrentText(default_preset)
         presetList.currentIndexChanged.connect(lambda: updatePreset(presetList.currentText()))
-        current_preset = default_preset
+        updatePreset(presetList.currentText())
+
 
         currentDefaultLb = QLabel()
         currentDefaultLb.setText("Current Default: "+default_preset)
