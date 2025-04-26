@@ -63,7 +63,7 @@ def startBot():
     if (platform.system() == "Linux"):
         threading.Thread( target=subprocess.run, args=( ["venv/bot/bin/python3", "bin/bot.py", botToken], )).start()
     elif (platform.system() == "Windows"):
-        subprocess.run(["venv\\bot\\Scripts\\python", "bin\\bot.py", botToken])
+        threading.Thread( target=subprocess.run, args=( ["venv\\bot\\Scripts\\python", "bin/bot.py", botToken], )).start()
 
 def startSpam(parent):
     guildId = QInputDialog.getText(parent, "Start Spam", "Enter server (or channel) ID")
