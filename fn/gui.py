@@ -199,6 +199,10 @@ def updatePreset(new):
     global current_preset
     current_preset = new
 
+def updateAppName(new):
+    global application_name
+    application_name = new
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -290,6 +294,20 @@ class MainWindow(QMainWindow):
         maxSpamCountBox.setValue(maximum_spam_count)
         maxSpamCountBox.valueChanged.connect(updateMSC)
 
+        label6 = QLabel()
+        label6.setText("Application Name")
+        
+        appNameBox = QLineEdit()
+        appNameBox.setText(application_name)
+        appNameBox.editingFinished.connect(lambda: updateAppName(appNameBox.text()))
+
+        label7 = QLabel()
+        label7.setText("Command Name")
+        
+        cmdNameBox = QLineEdit()
+        cmdNameBox.setText(command_name)
+        cmdNameBox.editingFinished.connect(lambda: updateAppName(cmdNameBox.text()))
+        
         startSpamBtn = QPushButton()
         startSpamBtn.setText("Start Spam")
         startSpamBtn.pressed.connect(lambda: startSpam(self))
