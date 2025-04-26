@@ -5,6 +5,7 @@ import os
 import sys
 import requests
 import urllib.request
+import shutil
 import zipfile
 
 print("orangypea.88 <3")
@@ -46,19 +47,19 @@ def install():
         zip_ref.extractall("dependencies")
 
     if (platform.system() == "Linux"):
-        subprocess.run(["venv/bot/bin/pip", "install", "-r", "dependencies/bot.txt"])
-        subprocess.run(["venv/user/bin/pip", "install", "-r", "dependencies/user.txt"])
-        subprocess.run(["venv/gui/bin/pip", "install", "-r", "dependencies/gui.txt"])
+        subprocess.run(["venv/bot/bin/pip", "install", "--ignore-installed", "-r", "dependencies/bot.txt"])
+        subprocess.run(["venv/user/bin/pip", "install", "--ignore-installed", "-r", "dependencies/user.txt"])
+        subprocess.run(["venv/gui/bin/pip", "install", "--ignore-installed", "-r", "dependencies/gui.txt"])
     elif (platform.system() == "Windows"):
-        subprocess.run(["venv\\bot\\Scripts\\pip", "install", "-r", "dependencies\\bot.txt"])
-        subprocess.run(["venv\\user\\Scripts\\pip", "install", "-r", "dependencies\\user.txt"])
-        subprocess.run(["venv\\gui\\Scripts\\pip", "install", "-r", "dependencies\\gui.txt"])
+        subprocess.run(["venv\\bot\\Scripts\\pip", "install", "--ignore-installed", "-r", "dependencies\\bot.txt"])
+        subprocess.run(["venv\\user\\Scripts\\pip", "install", "--ignore-installed", "-r", "dependencies\\user.txt"])
+        subprocess.run(["venv\\gui\\Scripts\\pip", "install", "--ignore-installed", "-r", "dependencies\\gui.txt"])
 
 if (os.path.isfile("version.txt")):
     # update
     currentversion=read("version.txt")
 
-    if (currentversion == newversion.replace("\n", "")):
+    if (currentversion.replace("\n", "") != newversion.replace("\n", "")):
         doUpdate = messagebox.askquestion("Dialog", "Would you like to update the script?\nCurrent Version: "+currentversion+"New Version: "+newversion)
         
         if (doUpdate == "yes"):
@@ -86,6 +87,7 @@ else:
 
         subprocess.run([pexc_name, "-m", "venv", "venv\\user"])
         subprocess.run([pexc_name, "-m", "venv", "venv\\bot"])
+        subprocess.run([pexc_name, "-m", "venv", "venv\\gui"])
 
     install()
 
@@ -96,5 +98,5 @@ print("Launching...")
 if (platform.system() == "Linux"):
     subprocess.run(["venv/gui/bin/python3", "bin/gui.py"])
 elif (platform.system() == "Windows"): 
-    subprocess.run(["venv\\gui\\Scripts\\python3", "bin\\gui.py"])
+    subprocess.run(["venv\\gui\\Scripts\\python", "bin\\gui.py"])
 
