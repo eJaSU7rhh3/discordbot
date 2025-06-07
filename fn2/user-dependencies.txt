@@ -1,0 +1,2 @@
+pyqt6
+dependencies/discord.py-self-master
