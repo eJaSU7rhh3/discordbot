@@ -138,6 +138,8 @@ try:
                                 await guild.leave()
                                 conn.send({"type":"success", "value":"Spam finished.\nTotal Spam count: "+str(sccount)})
                                 break
+                            if (len(validchannels) < 1):
+                                break
                             count+=1
                             for channel in validchannels:
                                 if (stopSpam.is_set()):
