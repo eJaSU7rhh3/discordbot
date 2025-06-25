@@ -1,6 +1,7 @@
 from multiprocessing.connection import Listener
 from contextlib import closing
 import subprocess
+import threading
 import platform
 import socket
 import signal
@@ -19,7 +20,6 @@ print("https://discord.gg/cnSX6CFBJr")
 print("Initializing...")
 
 settings={"token":"", "bot_token":"", "default_preset": 0, "presets":[], "randomize":False, "auto_leave":-1}
-current_preset = 0
 
 netAuth=str(uuid.uuid4())
 
@@ -39,8 +39,8 @@ address = ('localhost', find_free_port())
 listener = Listener(address, authkey=str.encode(netAuth))
 userPort = address[1]
 
-prevPid = -1
-prevBotPid = -1
+userProc = None
+botProc = None
 
 def applySettings():
     f=open("settings.json", "w")
@@ -49,10 +49,10 @@ def applySettings():
 
 def auth():
     clear()
-    global prevPid
+    global userProc
 
-    if (prevPid != -1):
-        os.kill(prevPid, signal.SIGKILL)
+    if (userProc != None):
+        userProc.kill()
 
     global userInfo
     global botInfo
@@ -63,11 +63,11 @@ def auth():
         print("To get the token for your personal account:\n\n1. Open Discord in your web browser and login\n2. Open any server or direct message channel\n3. Press *Ctrl+Shift+I* to show developer tools\n4. Navigate to the *Network* tab\n5. Press *Ctrl+R* to reload\n6. Switch between random chnanels to trigger network requests\n7. Search for a request that starts with *messages*\n8. Select the *Headers* tab on the right\n9. Scroll down to the *Request Headers* section\n10. Copy the value of the *authorization* header\n")
         token=input("Enter your Discord Token: ")
         clear()
-        prevPid = -1
+        userProc = None
         if (os.name == "posix"):
-            prevPid = subprocess.Popen(["venv/user/bin/python3", "bin/user.py", str(userPort), netAuth]).pid
+            userProc = subprocess.Popen(["venv/user/bin/python3", "bin/user.py", str(userPort), netAuth])
         elif (os.name == "nt"): 
-            prevPid = subprocess.Popen(["venv\\user\\Scripts\\python", "bin/user.py", str(userPort), netAuth]).pid
+            userProc = subprocess.Popen(["venv\\user\\Scripts\\python", "bin/user.py", str(userPort), netAuth])
 
         time.sleep(1)
         uConn = listener.accept()
@@ -94,19 +94,19 @@ def setupBot():
     global netAuth
     global bConn
     global uConn
-    global prevBotPid
+    global botProc
 
-    if (prevBotPid != -1):
-        os.kill(prevBotPid, signal.SIGKILL)
+    if (botProc != None):
+        botProc.kill()
 
     while True:
         token=input("Enter your Discord Bot Token: ")
         clear()
-        prevBotPid = -1
+        botProc = None
         if (os.name == "posix"):
-            prevBotPid = subprocess.Popen(["venv/bot/bin/python3", "bin/bot.py", str(userPort), netAuth]).pid
+            botProc = subprocess.Popen(["venv/bot/bin/python3", "bin/bot.py", str(userPort), netAuth])
         elif (os.name == "nt"):
-            prevBotPid = subprocess.Popen(["venv\\bot\\Scripts\\python", "bin/bot.py", str(userPort), netAuth]).pid
+            botProc = subprocess.Popen(["venv\\bot\\Scripts\\python", "bin/bot.py", str(userPort), netAuth])
         time.sleep(1)
         bConn = listener.accept()
         bConn.send(token)
@@ -126,7 +126,6 @@ def setupBot():
             break
         bConn.close()
 
-
 if (os.path.isfile("settings.json")):
     f=open("settings.json", "r")
     settings = json.loads(f.read())
@@ -135,11 +134,11 @@ if (os.path.isfile("settings.json")):
 if (settings["token"] == ""):
     auth()
 else:
-    prevPid = -1
+    userProc = None
     if (os.name == "posix"):
-        prevPid = subprocess.Popen(["venv/user/bin/python3", "bin/user.py", str(userPort), netAuth]).pid
+        userProc = subprocess.Popen(["venv/user/bin/python3", "bin/user.py", str(userPort), netAuth])
     elif (os.name == "nt"):
-        prevPid = subprocess.Popen(["venv\\user\\Scripts\\python", "bin/user.py", str(userPort), netAuth]).pid
+        userProc = subprocess.Popen(["venv\\user\\Scripts\\python", "bin/user.py", str(userPort), netAuth])
     time.sleep(1)
     uConn = listener.accept()
     uConn.send(settings["token"])
@@ -154,11 +153,11 @@ else:
 if (settings["bot_token"] == ""):
     setupBot()
 else:
-    prevBotPid = -1
+    botProc = None
     if (os.name == "posix"):
-        prevBotPid = subprocess.Popen(["venv/bot/bin/python3", "bin/bot.py", str(userPort), netAuth]).pid
+        botProc = subprocess.Popen(["venv/bot/bin/python3", "bin/bot.py", str(userPort), netAuth])
     elif (os.name == "nt"):
-        prevBotPid = subprocess.Popen(["venv\\bot\\Scripts\\python", "bin/bot.py", str(userPort), netAuth]).pid
+        botProc = subprocess.Popen(["venv\\bot\\Scripts\\python", "bin/bot.py", str(userPort), netAuth])
     time.sleep(1)
     bConn = listener.accept()
     bConn.send(settings["bot_token"])
@@ -184,6 +183,10 @@ def logout():
     applySettings()
     auth()
 
+def callStopSpam():
+    input()
+    uConn.send('')
+
 def startSpam():
     if (len(settings["presets"]) < 1):
         print("No presets available.")
@@ -199,16 +202,28 @@ def startSpam():
             clear()
             spamid = input("Server/Channel id: ")
             uConn.send({"type":"start_spam", "spam_message":settings["presets"][settings["default_preset"]]["spam"], "fallback_message":settings["presets"][settings["default_preset"]]["fallback"], "max_spam":settings["auto_leave"], "randomize":settings["randomize"], "id":spamid, "appid":botInfo["appid"]})
-            callback = uConn.recv()
-            print(callback["value"])
-            if (callback["type"] == "error"):
-                input("Unexpected error, try again.\nPress Enter to continue...")
-                continue
-            
-            input("Press Enter to stop spam.")
-            print("Attempting to stop...")
-            uConn.send('')
-            print(uConn.recv()["value"])
+            clear()
+            thread = threading.Thread(target=callStopSpam)
+            thread.start()
+            chanlist={}
+            while True:
+                msg = uConn.recv()
+                if (not isinstance(msg, dict)):
+                    continue # invalid
+                elif (msg["type"] == "error" or msg["type"] == "success"):
+                    print(msg["value"])
+                    break
+                elif (msg["type"] == "alert"):
+                    print(msg["value"])
+                elif (msg["type"] == "chanlist"):
+                    chanlist = msg["value"]
+                elif (msg["type"] == "info"):
+                    clear()
+                    chanlist[msg["id"]]["count"] += 1
+                    print("Press Enter to stop spam.\n###")
+                    for chanid in list(chanlist.keys()):
+                        print("#"+chanlist[chanid]["name"]+" ["+str(chanlist[chanid]["count"])+"]"+" - "+chanid[-5:])
+                    
             input("Press Enter to continue...")
         elif (option == "2"):
             for index in range(0, len(settings["presets"])):
@@ -219,6 +234,12 @@ def startSpam():
                 settings["default_preset"] = int(tbd)
                 applySettings()
 
+def presetsToList():
+    global settings
+    presetList = []
+
+    for preset in settings["presets"]:
+        presetList.append(preset["name"])
 
 def managePresets():
     while True:
@@ -233,7 +254,12 @@ def managePresets():
         elif (tbd == "+"):
             try:
                 clear()
-                presetName = input("Preset Name: ")
+                while True:
+                    presetName = input("Preset Name: ")
+                    if (presetName in presetsToList()):
+                        print("Preset name already exists.")
+                    else:
+                        break
                 clear()            
                 print("Enter/Paste your content. Ctrl-D or Ctrl-Z (windows) to save it.\nSpam Message:")
                 contents = []
@@ -278,6 +304,8 @@ def managePresets():
                 if (newName == ""):
                     print("Name not changed.")
                     time.sleep(0.5)
+                elif (newName in presetsToList()):
+                    print("Preset name already exists.")
                 else:
                     settings["presets"][int(tbd)]["name"] = newName
             elif (option=="2"):
@@ -383,6 +411,6 @@ while True:
         time.sleep(0.5)
     else:
         clear()
-        os.kill(prevPid, signal.SIGKILL)
-        os.kill(prevBotPid, signal.SIGKILL)
+        userProc.kill()
+        botProc.kill()
         break
