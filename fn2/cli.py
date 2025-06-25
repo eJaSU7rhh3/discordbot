@@ -201,6 +201,7 @@ def startSpam():
         elif (option == "1"):  
             clear()
             spamid = input("Server/Channel id: ")
+            uConn.flush()
             uConn.send({"type":"start_spam", "spam_message":settings["presets"][settings["default_preset"]]["spam"], "fallback_message":settings["presets"][settings["default_preset"]]["fallback"], "max_spam":settings["auto_leave"], "randomize":settings["randomize"], "id":spamid, "appid":botInfo["appid"]})
             clear()
             thread = threading.Thread(target=callStopSpam)
