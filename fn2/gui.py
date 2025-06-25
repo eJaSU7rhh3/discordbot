@@ -399,7 +399,7 @@ def logout(lb):
 def changeBotToken(lb):
     lb.setText("...")
     setupBot()
-    label4.setText("Bot: "+botInfo["username"]+" <a href=\".\">Change Token</a>")
+    lb.setText("Bot: "+botInfo["username"]+" <a href=\".\">Change Token</a>")
 
 def startSpam(p):
     global resultMsg
