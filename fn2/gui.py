@@ -416,7 +416,8 @@ def startSpam(p):
 
     spamid = spamid[0]    
 
-    uConn.flush()
+    while uConn.poll():
+        uConn.recv()
     uConn.send({"type":"start_spam", "spam_message":settings["presets"][settings["default_preset"]]["spam"], "fallback_message":settings["presets"][settings["default_preset"]]["fallback"], "max_spam":settings["auto_leave"], "randomize":settings["randomize"], "id":spamid, "appid":botInfo["appid"]}) 
     sW = spamWindow(p)
     sW.exec()
