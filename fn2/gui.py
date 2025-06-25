@@ -324,6 +324,7 @@ class spamWindow(QDialog):
 
         sWtree=tree
         sWlb=lb
+        sWalb=alb
         sWbtn=btn
         thread = threading.Thread(target=listenSpam)
         thread.start()
