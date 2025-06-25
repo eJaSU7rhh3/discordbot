@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QMainWindow, QApplication, QPushButton, QWidget, QTextEdit, QGridLayout, QLineEdit, QLabel, QComboBox, QVBoxLayout, QGroupBox, QHBoxLayout, QDialog, QDialogButtonBox, QCheckBox, QInputDialog, QSpinBox, QMessageBox
+from PyQt6.QtWidgets import QMainWindow, QApplication, QPushButton, QWidget, QTextEdit, QGridLayout, QLineEdit, QLabel, QComboBox, QVBoxLayout, QGroupBox, QHBoxLayout, QDialog, QDialogButtonBox, QCheckBox, QInputDialog, QSpinBox, QMessageBox, QTreeWidget, QTreeWidgetItem
 from PyQt6.QtCore import Qt
 from multiprocessing.connection import Listener
 from contextlib import closing
@@ -36,8 +36,8 @@ address = ('localhost', find_free_port())
 listener = Listener(address, authkey=str.encode(netAuth))
 userPort = address[1]
 
-prevPid = -1
-prevBotPid = -1
+userProc = None
+botProc = None
 
 def applySettings():
     f=open("settings.json", "w")
@@ -111,10 +111,10 @@ class botLoginWindow(QDialog):
         self.setFixedSize(250, 100)
 
 def auth():
-    global prevPid
+    global userProc
 
-    if (prevPid != -1):
-        os.kill(prevPid, signal.SIGKILL)
+    if (userProc != None):
+        userProc.kill()
 
     global userInfo
     global botInfo
@@ -127,11 +127,11 @@ def auth():
         if (tokenui.result() != QDialog.DialogCode.Accepted):
             sys.exit(0)
         token = tokenui.token
-        prevPid = -1
+        userProc = None
         if (os.name == "posix"):
-            prevPid = subprocess.Popen(["venv/user/bin/python3", "bin/user.py", str(userPort), netAuth]).pid
+            userProc = subprocess.Popen(["venv/user/bin/python3", "bin/user.py", str(userPort), netAuth])
         elif (os.name == "nt"): 
-            prevPid = subprocess.Popen(["venv\\user\\Scripts\\python", "bin/user.py", str(userPort), netAuth]).pid
+            userProc = subprocess.Popen(["venv\\user\\Scripts\\python", "bin/user.py", str(userPort), netAuth])
 
         time.sleep(1)
         uConn = listener.accept()
@@ -162,10 +162,10 @@ def setupBot():
     global netAuth
     global bConn
     global uConn
-    global prevBotPid
+    global botProc
 
-    if (prevBotPid != -1):
-        os.kill(prevBotPid, signal.SIGKILL)
+    if (botProc != None):
+        botProc.kill()
 
     while True:
         tokenui = botLoginWindow(None)
@@ -173,11 +173,11 @@ def setupBot():
         if (tokenui.result() != QDialog.DialogCode.Accepted):
             sys.exit(0)
         token = tokenui.token
-        prevBotPid = -1
+        botProc = None
         if (os.name == "posix"):
-            prevBotPid = subprocess.Popen(["venv/bot/bin/python3", "bin/bot.py", str(userPort), netAuth]).pid
+            botProc = subprocess.Popen(["venv/bot/bin/python3", "bin/bot.py", str(userPort), netAuth])
         elif (os.name == "nt"):
-            prevBotPid = subprocess.Popen(["venv\\bot\\Scripts\\python", "bin/bot.py", str(userPort), netAuth]).pid
+            botProc = subprocess.Popen(["venv\\bot\\Scripts\\python", "bin/bot.py", str(userPort), netAuth])
         time.sleep(1)
         bConn = listener.accept()
         bConn.send(token)
@@ -256,6 +256,79 @@ class presetAddWindow(QDialog):
         layout.addWidget(btnBox)
         self.setFixedSize(250, 400)
 
+sWtree=None
+sWlb=None
+sWalb=None
+sWbtn=None
+resultMsg=""
+
+def listenSpam():
+    global resultMsg
+    global sWtree
+    global sWlb
+    global sWalb
+    global sWbtn
+
+    chanlist={}
+
+    while True:
+        msg = uConn.recv()
+        if (not isinstance(msg, dict)):
+            continue # invalid
+        elif (msg["type"] == "error" or msg["type"] == "success"):
+            resultMsg = msg["value"]
+            sWlb.setText(msg["value"])
+            sWbtn.setText("Continue")
+            break
+        elif (msg["type"] == "alert"):
+            sWalb.setText(msg["value"])
+        elif (msg["type"] == "chanlist"):
+            chanlist = msg["value"]
+            for chanid in list(chanlist.keys()):
+                chanItem = QTreeWidgetItem(sWtree)
+                chanItem.setText(0, "#"+chanlist[chanid]["name"]+" - "+chanid[-5:])
+                chanItem.setText(1, "0")
+                chanlist[chanid]["item"] = chanItem
+        elif (msg["type"] == "info"):
+            chanlist[msg["id"]]["count"] += 1
+            chanlist[msg["id"]]["item"].setText(1, str(chanlist[msg["id"]]["count"]))
+
+class spamWindow(QDialog):
+    def __init__(self, parent):
+        global sWtree
+        global sWlb
+        global sWalb
+        global sWbtn
+
+        super().__init__(parent)
+
+        self.setWindowTitle("Ongoing Spam")
+        layout=QVBoxLayout()
+        self.setLayout(layout)
+
+        tree = QTreeWidget()
+        tree.setColumnCount(2)
+        tree.setHeaderLabels(["Name", "Count"])
+
+        lb = QLabel()
+        alb= QLabel()
+
+        btn = QPushButton()
+        btn.setText("Stop Spam")
+        btn.pressed.connect(lambda: self.close())
+
+        layout.addWidget(tree)
+        layout.addWidget(lb)
+        layout.addWidget(alb)
+        layout.addWidget(btn)
+
+        sWtree=tree
+        sWlb=lb
+        sWbtn=btn
+        thread = threading.Thread(target=listenSpam)
+        thread.start()
+
+
 def presetsToList():
     global settings
     presetList = []
@@ -329,8 +402,9 @@ def changeBotToken(lb):
     label4.setText("Bot: "+botInfo["username"]+" <a href=\".\">Change Token</a>")
 
 def startSpam(p):
+    global resultMsg
     if (len(settings["presets"]) < 1):
-        msgBox = QMessageBox()
+        msgBox = QMessageBox(p)
         msgBox.setText("No presets available.")
         msgBox.exec()
         return
@@ -341,22 +415,16 @@ def startSpam(p):
 
     spamid = spamid[0]    
 
-    uConn.send({"type":"start_spam", "spam_message":settings["presets"][settings["default_preset"]]["spam"], "fallback_message":settings["presets"][settings["default_preset"]]["fallback"], "max_spam":settings["auto_leave"], "randomize":settings["randomize"], "id":spamid, "appid":botInfo["appid"]})
-    callback = uConn.recv()
-
-    if (callback["type"] == "error"):
-        msgBox = QMessageBox(p)
-        msgBox.setText(callback["value"])
-        msgBox.exec()
-        return
-    
-    msgBox = QMessageBox(p)
-    msgBox.setText("Press 'Ok' to stop spam.")
-    msgBox.exec()
+    uConn.send({"type":"start_spam", "spam_message":settings["presets"][settings["default_preset"]]["spam"], "fallback_message":settings["presets"][settings["default_preset"]]["fallback"], "max_spam":settings["auto_leave"], "randomize":settings["randomize"], "id":spamid, "appid":botInfo["appid"]}) 
+    sW = spamWindow(p)
+    sW.exec()
     uConn.send('')
+    while resultMsg=="":
+        pass
     msgBox = QMessageBox(p)
-    msgBox.setText(uConn.recv()["value"])
+    msgBox.setText(resultMsg)
     msgBox.exec()
+    resultMsg=""
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -453,11 +521,11 @@ if (os.path.isfile("settings.json")):
 if (settings["token"] == ""):
     auth()
 else:
-    prevPid = -1
+    userProc = None
     if (os.name == "posix"):
-        prevPid = subprocess.Popen(["venv/user/bin/python3", "bin/user.py", str(userPort), netAuth]).pid
+        userProc = subprocess.Popen(["venv/user/bin/python3", "bin/user.py", str(userPort), netAuth])
     elif (os.name == "nt"):
-        prevPid = subprocess.Popen(["venv\\user\\Scripts\\python", "bin/user.py", str(userPort), netAuth]).pid
+        userProc = subprocess.Popen(["venv\\user\\Scripts\\python", "bin/user.py", str(userPort), netAuth])
     time.sleep(1)
     uConn = listener.accept()
     uConn.send(settings["token"])
@@ -471,11 +539,11 @@ else:
 if (settings["bot_token"] == ""):
     setupBot()
 else:
-    prevBotPid = -1
+    botProc = None
     if (os.name == "posix"):
-        prevBotPid = subprocess.Popen(["venv/bot/bin/python3", "bin/bot.py", str(userPort), netAuth]).pid
+        botProc = subprocess.Popen(["venv/bot/bin/python3", "bin/bot.py", str(userPort), netAuth])
     elif (os.name == "nt"):
-        prevBotPid = subprocess.Popen(["venv\\bot\\Scripts\\python", "bin/bot.py", str(userPort), netAuth]).pid
+        botProc = subprocess.Popen(["venv\\bot\\Scripts\\python", "bin/bot.py", str(userPort), netAuth])
     time.sleep(1)
     bConn = listener.accept()
     bConn.send(settings["bot_token"])
@@ -500,5 +568,5 @@ else:
 w = MainWindow()
 app.exec()
 
-os.kill(prevPid, signal.SIGKILL)
-os.kill(prevBotPid, signal.SIGKILL)
+userProc.kill()
+botProc.kill()
