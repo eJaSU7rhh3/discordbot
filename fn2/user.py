@@ -77,7 +77,6 @@ try:
                                 continue
                             thread = threading.Thread(target=stopSpamCall)
                             thread.start()
-                            thread.join()
 
                             requires_fallback = False
      
@@ -89,7 +88,11 @@ try:
                             command.target_channel = channel
                             count = 0
                             sccount = 0
-                            conn.send({"type":"start", "value":"Spam started."})
+
+                            chandict = {}
+                            chandict[str(channel.id)] = {"name":channel.name, "count":0}
+                            conn.send({"type":"chanlist", "value":chanarray})
+
                             while (not stopSpam.is_set()):
                                 if (maximum_spam_count != -1 and count>=maximum_spam_count):
                                     await client.close()
@@ -101,9 +104,11 @@ try:
                                 if (not requires_fallback):
                                     await command.__call__(channel=channel, text=spam_message, slowmode_delay=channel.slowmode_delay, randomize=randomize_message)
                                     sccount += 1
+                                    conn.send({"type":"info", "id":str(channel.id)})
                                 else:
                                     await command.__call__(channel=channel, text=fallback_message, slowmode_delay=channel.slowmode_delay, randomize=randomize_message)
                                     sccount += 1
+                                    conn.send({"type":"info", "id":str(channel.id)})
 
                         thread = threading.Thread(target=stopSpamCall)
                         thread.start()
@@ -129,16 +134,20 @@ try:
                             if (not permissions.attach_files):
                                 fallbackchannels.append(channel)
 
+                        chandict = {}
+                        for chan in validchannels:
+                            chandict[str(chan.id)] = {"name":chan.name, "count":0}
+                        conn.send({"type":"chanlist", "value":chandict})
+                        
                         count = 0
                         sccount = 0
-                        conn.send({"type":"start", "value":"Spam started."})
                         while (not stopSpam.is_set()):
                             if (maximum_spam_count != -1 and count>=maximum_spam_count):
                                 await client.close()
                                 await guild.leave()
-                                conn.send({"type":"success", "value":"Spam finished.\nTotal Spam count: "+str(sccount)})
                                 break
                             if (len(validchannels) < 1):
+                                conn.send({"type":"alert", "value":"No valid channels found."})
                                 break
                             count+=1
                             for channel in validchannels:
@@ -157,9 +166,11 @@ try:
                                     if (not channel in fallbackchannels):
                                         await command.__call__(channel=channel, text=spam_message, slowmode_delay=channel.slowmode_delay, randomize=randomize_message)
                                         sccount += 1
+                                        conn.send({"type":"info", "id":str(channel.id)})
                                     else:
                                         await command.__call__(channel=channel, text=fallback_message, slowmode_delay=channel.slowmode_delay, randomize=randomize_message)
                                         sccount += 1
+                                        conn.send({"type":"info", "id":str(channel.id)})
                                 except:
                                     pass
                         conn.send({"type":"success", "value":"Spam finished.\nTotal Spam count: "+str(sccount)})
